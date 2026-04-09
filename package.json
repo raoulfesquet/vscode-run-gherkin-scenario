@@ -1,0 +1,123 @@
+{
+  "name": "run-gherkin-scenario",
+  "displayName": "Run Gherkin Scenario",
+  "description": "Run Gherkin scenarios from VS Code with a right-click or inline CodeLens button — automatically parses feature-file tags, prompts for multi-value choices, and remembers them.",
+  "version": "1.0.0",
+  "publisher": "raoulfesquet",
+  "license": "MIT",
+  "icon": "images/icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/raoulfesquet/vscode-run-gherkin-scenario"
+  },
+  "bugs": {
+    "url": "https://github.com/raoulfesquet/vscode-run-gherkin-scenario/issues"
+  },
+  "homepage": "https://github.com/raoulfesquet/vscode-run-gherkin-scenario#readme",
+  "categories": [
+    "Testing"
+  ],
+  "keywords": [
+    "gherkin",
+    "cucumber",
+    "bdd",
+    "scenario",
+    "runner",
+    "feature",
+    "codelens",
+    "codeceptjs"
+  ],
+  "engines": {
+    "vscode": "^1.74.0"
+  },
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./extension.js",
+  "contributes": {
+    "configuration": {
+      "title": "Run Gherkin Scenario",
+      "properties": {
+        "gherkinRunner.runCommand": {
+          "type": "string",
+          "default": "npx cucumber-js",
+          "description": "Base command used to run scenarios (e.g. 'npx cucumber-js', 'yarn cjs', 'npx codeceptjs run --grep')."
+        },
+        "gherkinRunner.stripTagPrefix": {
+          "type": "boolean",
+          "default": false,
+          "description": "Strip the @ prefix from tags when building the run command. Enable this for CLIs that add @ internally."
+        },
+        "gherkinRunner.defaultFlags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "description": "Default CLI flags appended to every run (e.g. [\"-v\", \"--format\", \"progress\"])."
+        },
+        "gherkinRunner.availableFlags": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "flag": {
+                "type": "string",
+                "description": "The CLI flag (e.g. '-v')"
+              },
+              "label": {
+                "type": "string",
+                "description": "Human-readable description shown in the picker"
+              }
+            },
+            "required": ["flag", "label"]
+          },
+          "default": [],
+          "description": "Flags offered in the 'Configure Run Flags' picker. When empty, the picker allows freeform input only."
+        },
+        "gherkinRunner.showCodeLens": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show inline Run buttons above each Scenario line in .feature files."
+        },
+        "gherkinRunner.showVisualCodeLens": {
+          "type": "boolean",
+          "default": false,
+          "description": "Show a second Run (visual) CodeLens button next to the Run button."
+        }
+      }
+    },
+    "commands": [
+      {
+        "command": "gherkin.runScenario",
+        "title": "▶ Run Scenario"
+      },
+      {
+        "command": "gherkin.runScenarioVisual",
+        "title": "▶ Run Scenario (visual)"
+      },
+      {
+        "command": "gherkin.configureFlags",
+        "title": "Gherkin: Configure Run Flags"
+      },
+      {
+        "command": "gherkin.resetTagChoices",
+        "title": "Gherkin: Reset Tag Choices"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "gherkin.runScenario",
+          "when": "resourceExtname == .feature",
+          "group": "1_run@1"
+        },
+        {
+          "command": "gherkin.runScenarioVisual",
+          "when": "resourceExtname == .feature && config.gherkinRunner.showVisualCodeLens",
+          "group": "1_run@2"
+        }
+      ]
+    }
+  }
+}
