@@ -81,6 +81,34 @@ async function resolveHeaderTags(document, state) {
   return resolved;
 }
 
+// ── First-run setup ─────────────────────────────────────────────
+
+async function ensureRunCommand() {
+  const cfg = vscode.workspace.getConfiguration('gherkinRunner');
+  const inspected = cfg.inspect('runCommand');
+
+  if (inspected.workspaceValue !== undefined || inspected.workspaceFolderValue !== undefined) {
+    return cfg.get('runCommand');
+  }
+
+  const input = await vscode.window.showInputBox({
+    prompt: 'Enter the command used to run scenarios in this project',
+    placeHolder: 'e.g. yarn cjs, npx cucumber-js, npx codeceptjs run --grep',
+    value: inspected.globalValue || inspected.defaultValue || 'npx cucumber-js',
+    title: 'Gherkin Runner — First Run Setup',
+    ignoreFocusOut: true,
+  });
+  if (input === undefined) return null;
+
+  const cmd = input.trim() || 'npx cucumber-js';
+  const target = vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 1
+    ? vscode.ConfigurationTarget.WorkspaceFolder
+    : vscode.ConfigurationTarget.Workspace;
+  await cfg.update('runCommand', cmd, target);
+  vscode.window.showInformationMessage(`Run command set to: ${cmd}`);
+  return cmd;
+}
+
 // ── Run ────────────────────────────────────────────────────────
 
 async function runScenario(context, visual, lineOverride) {
@@ -97,9 +125,11 @@ async function runScenario(context, visual, lineOverride) {
   const headerTags = await resolveHeaderTags(editor.document, context.workspaceState);
   if (!headerTags) return;
 
+  const runCmd = await ensureRunCommand();
+  if (!runCmd) return;
+
   const cfg = vscode.workspace.getConfiguration('gherkinRunner');
   const strip = cfg.get('stripTagPrefix', false);
-  const runCmd = cfg.get('runCommand', 'npx cucumber-js');
   const defaultFlags = cfg.get('defaultFlags', []);
 
   const allTags = [...headerTags, goalTag].map(t => strip ? t.replace(/^@/, '') : t);

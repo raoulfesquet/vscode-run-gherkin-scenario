@@ -4,6 +4,13 @@ All notable changes to **Run Gherkin Scenario** will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [1.1.0] - 2026-04-10
+
+### Added
+
+- First-run setup: prompts for the run command on first use (no more manual settings.json editing)
+- Automatically saves the choice as a workspace/folder setting
+
 ## [1.0.1] - 2026-04-10
 
 ### Changed
