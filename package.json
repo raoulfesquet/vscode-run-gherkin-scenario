@@ -2,7 +2,7 @@
   "name": "run-gherkin-scenario",
   "displayName": "Run Gherkin Scenario",
   "description": "Run Gherkin scenarios from VS Code with a right-click or inline CodeLens button — automatically parses feature-file tags, prompts for multi-value choices, and remembers them.",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "publisher": "raoulfesquet",
   "license": "MIT",
   "icon": "images/icon.png",
