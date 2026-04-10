@@ -83,8 +83,8 @@ async function resolveHeaderTags(document, state) {
 
 // ── First-run setup ─────────────────────────────────────────────
 
-async function ensureRunCommand() {
-  const cfg = vscode.workspace.getConfiguration('gherkinRunner');
+async function ensureRunCommand(resource) {
+  const cfg = vscode.workspace.getConfiguration('gherkinRunner', resource);
   const inspected = cfg.inspect('runCommand');
 
   if (inspected.workspaceValue !== undefined || inspected.workspaceFolderValue !== undefined) {
@@ -101,10 +101,7 @@ async function ensureRunCommand() {
   if (input === undefined) return null;
 
   const cmd = input.trim() || 'npx cucumber-js';
-  const target = vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 1
-    ? vscode.ConfigurationTarget.WorkspaceFolder
-    : vscode.ConfigurationTarget.Workspace;
-  await cfg.update('runCommand', cmd, target);
+  await cfg.update('runCommand', cmd, vscode.ConfigurationTarget.WorkspaceFolder);
   vscode.window.showInformationMessage(`Run command set to: ${cmd}`);
   return cmd;
 }
@@ -125,10 +122,11 @@ async function runScenario(context, visual, lineOverride) {
   const headerTags = await resolveHeaderTags(editor.document, context.workspaceState);
   if (!headerTags) return;
 
-  const runCmd = await ensureRunCommand();
+  const resource = editor.document.uri;
+  const runCmd = await ensureRunCommand(resource);
   if (!runCmd) return;
 
-  const cfg = vscode.workspace.getConfiguration('gherkinRunner');
+  const cfg = vscode.workspace.getConfiguration('gherkinRunner', resource);
   const strip = cfg.get('stripTagPrefix', false);
   const defaultFlags = cfg.get('defaultFlags', []);
 
