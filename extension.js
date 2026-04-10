@@ -81,29 +81,85 @@ async function resolveHeaderTags(document, state) {
   return resolved;
 }
 
+// ── Common flags catalog ────────────────────────────────────────
+
+const COMMON_FLAGS = [
+  { flag: '-v', label: 'Verbose output' },
+  { flag: '--verbose', label: 'Verbose output (long form)' },
+  { flag: '-l', label: 'Local testing mode' },
+  { flag: '--local-testing', label: 'Local testing mode (long form)' },
+  { flag: '--visual', label: 'Run with browser visible' },
+  { flag: '--dry-run', label: 'Validate without executing' },
+  { flag: '--parallel', label: 'Run scenarios in parallel' },
+  { flag: '--retry', label: 'Retry failed scenarios' },
+  { flag: '--format progress', label: 'Progress format output' },
+  { flag: '--format json', label: 'JSON format output' },
+];
+
 // ── First-run setup ─────────────────────────────────────────────
 
-async function ensureRunCommand(resource) {
+function needsSetup(cfg) {
+  const keys = ['runCommand', 'stripTagPrefix', 'defaultFlags'];
+  return keys.every(k => {
+    const i = cfg.inspect(k);
+    return i.workspaceValue === undefined && i.workspaceFolderValue === undefined;
+  });
+}
+
+async function firstRunSetup(resource) {
   const cfg = vscode.workspace.getConfiguration('gherkinRunner', resource);
+  if (!needsSetup(cfg)) return true;
+
   const inspected = cfg.inspect('runCommand');
-
-  if (inspected.workspaceValue !== undefined || inspected.workspaceFolderValue !== undefined) {
-    return cfg.get('runCommand');
-  }
-
-  const input = await vscode.window.showInputBox({
-    prompt: 'Enter the command used to run scenarios in this project',
+  const cmd = await vscode.window.showInputBox({
+    prompt: 'Step 1/3 — Enter the command used to run scenarios in this project',
     placeHolder: 'e.g. yarn cjs, npx cucumber-js, npx codeceptjs run --grep',
     value: inspected.globalValue || inspected.defaultValue || 'npx cucumber-js',
     title: 'Gherkin Runner — First Run Setup',
     ignoreFocusOut: true,
   });
-  if (input === undefined) return null;
+  if (cmd === undefined) return false;
+  await cfg.update('runCommand', cmd.trim() || 'npx cucumber-js', vscode.ConfigurationTarget.WorkspaceFolder);
 
-  const cmd = input.trim() || 'npx cucumber-js';
-  await cfg.update('runCommand', cmd, vscode.ConfigurationTarget.WorkspaceFolder);
-  vscode.window.showInformationMessage(`Run command set to: ${cmd}`);
-  return cmd;
+  const stripChoice = await vscode.window.showQuickPick(
+    [
+      { label: 'Yes', detail: 'Tags will be passed without @ (e.g. smoke instead of @smoke)', value: true },
+      { label: 'No', detail: 'Tags will keep the @ prefix (e.g. @smoke)', value: false },
+    ],
+    {
+      placeHolder: 'Does your CLI expect tags without the @ prefix?',
+      title: 'Gherkin Runner — Step 2/3 — Strip @ prefix',
+      ignoreFocusOut: true,
+    },
+  );
+  if (!stripChoice) return false;
+  await cfg.update('stripTagPrefix', stripChoice.value, vscode.ConfigurationTarget.WorkspaceFolder);
+
+  const flagItems = COMMON_FLAGS.map(f => ({ label: f.flag, detail: f.label, picked: false }));
+  const picked = await vscode.window.showQuickPick(flagItems, {
+    canPickMany: true,
+    placeHolder: 'Select flags to add to every run (or press Enter to skip)',
+    title: 'Gherkin Runner — Step 3/3 — Default flags',
+    ignoreFocusOut: true,
+  });
+  const flags = picked ? picked.map(p => p.label) : [];
+
+  const custom = await vscode.window.showInputBox({
+    prompt: 'Add custom flags? (space-separated, or leave empty to skip)',
+    placeHolder: 'e.g. --timeout 30000 --bail',
+    title: 'Gherkin Runner — Step 3/3 — Custom flags',
+    ignoreFocusOut: true,
+  });
+  if (custom && custom.trim()) {
+    flags.push(...custom.trim().split(/\s+/));
+  }
+
+  await cfg.update('defaultFlags', flags, vscode.ConfigurationTarget.WorkspaceFolder);
+
+  const summary = [`Command: ${cmd.trim() || 'npx cucumber-js'}`, `Strip @: ${stripChoice.value ? 'yes' : 'no'}`];
+  if (flags.length) summary.push(`Flags: ${flags.join(' ')}`);
+  vscode.window.showInformationMessage(`Setup complete — ${summary.join(' | ')}`);
+  return true;
 }
 
 // ── Run ────────────────────────────────────────────────────────
@@ -123,10 +179,11 @@ async function runScenario(context, visual, lineOverride) {
   if (!headerTags) return;
 
   const resource = editor.document.uri;
-  const runCmd = await ensureRunCommand(resource);
-  if (!runCmd) return;
+  const ready = await firstRunSetup(resource);
+  if (!ready) return;
 
   const cfg = vscode.workspace.getConfiguration('gherkinRunner', resource);
+  const runCmd = cfg.get('runCommand', 'npx cucumber-js');
   const strip = cfg.get('stripTagPrefix', false);
   const defaultFlags = cfg.get('defaultFlags', []);
 

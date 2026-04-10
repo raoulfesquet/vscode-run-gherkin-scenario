@@ -4,12 +4,18 @@ All notable changes to **Run Gherkin Scenario** will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
-## [1.1.0] - 2026-04-10
+## [1.2.1] - 2026-04-10
 
 ### Added
 
-- First-run setup: prompts for the run command on first use (no more manual settings.json editing)
-- Automatically saves the choice as a workspace/folder setting
+- First-run setup wizard (3 steps): run command, strip @ prefix, default flags
+- Common flags catalog with descriptions in the flags picker
+- Custom flags input after the catalog picker
+- All settings scoped to resource for multi-root workspace support
+
+### Fixed
+
+- Folder settings write error in multi-root workspaces
 
 ## [1.0.1] - 2026-04-10
 
