@@ -24,8 +24,11 @@ jobs:
       - name: Publish to VS Code Marketplace
         run: npx @vscode/vsce publish --pat ${{ secrets.VSCE_PAT }} --allow-missing-repository
 
-      - name: Publish to Open VSX
+      - name: Create Open VSX namespace
         continue-on-error: true
+        run: npx ovsx create-namespace raoulfesquet --pat ${{ secrets.OVSX_TOKEN }}
+
+      - name: Publish to Open VSX
         run: npx ovsx publish *.vsix --pat ${{ secrets.OVSX_TOKEN }}
 
       - name: Create GitHub Release
