@@ -2,7 +2,7 @@
   "name": "run-gherkin-scenario",
   "displayName": "Run Gherkin Scenario",
   "description": "Run Gherkin scenarios from VS Code with a right-click or inline CodeLens button — automatically parses feature-file tags, prompts for multi-value choices, and remembers them.",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "publisher": "raoulfesquet",
   "license": "MIT",
   "icon": "images/icon.png",
@@ -41,11 +41,13 @@
         "gherkinRunner.runCommand": {
           "type": "string",
           "default": "npx cucumber-js",
+          "scope": "resource",
           "description": "Base command used to run scenarios (e.g. 'npx cucumber-js', 'yarn cjs', 'npx codeceptjs run --grep')."
         },
         "gherkinRunner.stripTagPrefix": {
           "type": "boolean",
           "default": false,
+          "scope": "resource",
           "description": "Strip the @ prefix from tags when building the run command. Enable this for CLIs that add @ internally."
         },
         "gherkinRunner.defaultFlags": {
@@ -54,6 +56,7 @@
             "type": "string"
           },
           "default": [],
+          "scope": "resource",
           "description": "Default CLI flags appended to every run (e.g. [\"-v\", \"--format\", \"progress\"])."
         },
         "gherkinRunner.availableFlags": {
@@ -73,16 +76,19 @@
             "required": ["flag", "label"]
           },
           "default": [],
+          "scope": "resource",
           "description": "Flags offered in the 'Configure Run Flags' picker. When empty, the picker allows freeform input only."
         },
         "gherkinRunner.showCodeLens": {
           "type": "boolean",
           "default": true,
+          "scope": "resource",
           "description": "Show inline Run buttons above each Scenario line in .feature files."
         },
         "gherkinRunner.showVisualCodeLens": {
           "type": "boolean",
           "default": false,
+          "scope": "resource",
           "description": "Show a second Run (visual) CodeLens button next to the Run button."
         }
       }
