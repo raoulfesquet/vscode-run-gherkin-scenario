@@ -22,6 +22,8 @@ jobs:
         run: npx @vscode/vsce publish --pat ${{ secrets.VSCE_PAT }} --allow-missing-repository
 
       - name: Publish to Open VSX
+        if: secrets.OVSX_TOKEN != ''
+        continue-on-error: true
         run: npx ovsx publish *.vsix --pat ${{ secrets.OVSX_TOKEN }}
 
       - name: Create GitHub Release
