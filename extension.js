@@ -57,6 +57,7 @@ function parseScenarioTagLines(document, scenarioLine) {
 // ── Persistent tag choices ─────────────────────────────────────
 
 const FILE_KEY = '__file__';
+const RESET_MARKER = '__reset__';
 
 function choicesKey(filePath) {
   return `tagChoices:${filePath}`;
@@ -71,13 +72,14 @@ async function resolveTags(document, state, goalTag, scenarioLine) {
   const allStored = state.get(key, {});
   const scenarioId = goalTag || '__default__';
 
+  const wasReset = allStored[scenarioId] === RESET_MARKER;
   const hasFileDefaults = allStored[FILE_KEY] && typeof allStored[FILE_KEY] === 'object';
-  const hasScenarioOverride = allStored[scenarioId] && typeof allStored[scenarioId] === 'object';
+  const hasScenarioOverride = !wasReset && allStored[scenarioId] && typeof allStored[scenarioId] === 'object';
 
   let source;
   if (hasScenarioOverride) {
     source = allStored[scenarioId];
-  } else if (hasFileDefaults) {
+  } else if (!wasReset && hasFileDefaults) {
     source = allStored[FILE_KEY];
   } else {
     source = {};
@@ -343,9 +345,19 @@ async function resetTagChoices(context) {
     vscode.window.showInformationMessage('Open a .feature file first');
     return;
   }
+
   const key = choicesKey(editor.document.uri.fsPath);
-  await context.workspaceState.update(key, undefined);
-  vscode.window.showInformationMessage('Tag choices reset — they will be asked again on next run.');
+  const goalTag = findGoalTag(editor.document, editor.selection.active.line);
+
+  if (goalTag) {
+    const allStored = context.workspaceState.get(key, {});
+    allStored[goalTag] = RESET_MARKER;
+    await context.workspaceState.update(key, allStored);
+    vscode.window.showInformationMessage(`Tag choices reset for ${goalTag} — will be asked again on next run.`);
+  } else {
+    await context.workspaceState.update(key, undefined);
+    vscode.window.showInformationMessage('All tag choices reset for this file.');
+  }
 }
 
 // ── Lifecycle ──────────────────────────────────────────────────
