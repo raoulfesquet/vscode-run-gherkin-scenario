@@ -1,14 +1,15 @@
 # Run Gherkin Scenario
 
-Run any Gherkin scenario straight from VS Code or Cursor — right-click, click the inline button, or use a keyboard shortcut. The extension reads the feature-file header tags, asks you to choose when a line has several values, remembers your picks, and builds the full CLI command for you.
+Run any Gherkin scenario straight from VS Code or Cursor — right-click, click the inline button, or use a keyboard shortcut. The extension reads all tags (header and scenario-level), asks you to choose when a line has several values, remembers your picks, and builds the full CLI command for you.
 
 ## Features
 
-- **Right-click context menu** — "Run Scenario" appears when you right-click inside a `.feature` file
-- **CodeLens inline buttons** — a clickable `▶ Run @tag` appears above every `Scenario:` line
-- **Automatic tag parsing** — reads all header tags (brand, environment, platform, etc.) from the feature file
+- **Right-click context menu** — "Run Scenario" and "↺ Reset Tag Choices" appear when you right-click inside a `.feature` file
+- **CodeLens inline buttons** — `▶ Run @tag` and `↺ Reset tags` appear above every `Scenario:` line
+- **Automatic tag parsing** — reads both header tags (before `Feature:`) and scenario-level tags (above each `Scenario:`)
 - **Multi-tag quickpick** — when a line has multiple tags (e.g. `@android @ios`), prompts you to choose one
-- **Persistent choices** — your picks are saved per file and reused on subsequent runs
+- **Smart persistent choices** — the first scenario you run establishes file-level defaults; all other scenarios inherit them automatically without prompting
+- **Per-scenario overrides** — reset a specific scenario to re-choose its tags independently from the file defaults
 - **Configurable command** — works with any Gherkin CLI (Cucumber-JS, CodeceptJS, custom runners)
 - **Configurable flags** — set default CLI flags per project
 
@@ -16,11 +17,19 @@ Run any Gherkin scenario straight from VS Code or Cursor — right-click, click 
 
 ### Right-click
 
-Place your cursor anywhere inside a scenario and right-click. Select **"Run Scenario"** from the context menu.
+Place your cursor anywhere inside a scenario and right-click:
+
+- **▶ Run Scenario** — run the scenario at cursor position
+- **▶ Run Scenario (visual)** — run with `--visual` flag (when enabled)
+- **↺ Reset Tag Choices** — reset stored tag choices for the scenario at cursor position; if the cursor is outside any scenario, resets all choices for the file
 
 ### CodeLens
 
-Click the `▶ Run @goalTag` button that appears above each `Scenario:` line.
+Each `Scenario:` line shows inline buttons:
+
+- `▶ Run @goalTag` — run the scenario
+- `▶ Run (visual)` — run with `--visual` flag (when enabled)
+- `↺ Reset tags` — reset stored tag choices for this specific scenario
 
 ### Command Palette
 
@@ -31,7 +40,7 @@ Click the `▶ Run @goalTag` button that appears above each `Scenario:` line.
 | **Run Scenario** | Run the scenario at the cursor position |
 | **Run Scenario (visual)** | Run with `--visual` flag appended |
 | **Gherkin: Configure Run Flags** | Pick or type default CLI flags |
-| **Gherkin: Reset Tag Choices** | Clear saved multi-tag choices for the current file |
+| **↺ Reset Tag Choices** | Reset tag choices for the scenario at cursor (or whole file if outside a scenario) |
 
 ### Keyboard shortcut (optional)
 
@@ -55,24 +64,37 @@ Given a feature file like this:
 @staging
 @chrome @firefox
 @en
-@smoke
-@high
-@checkout
-@wip
 Feature: Checkout
 
+  #context
+  @fr @com @sn
+  #goals
   @checkoutGuestDisplay
   Scenario: Displaying the guest checkout form
     Given a user on the product page
     ...
+
+  #context
+  @fr @com @sn
+  #goals
+  @checkoutPayment
+  Scenario: Processing the payment
+    Given a user on the checkout page
+    ...
 ```
 
-When you run the scenario:
+When you run the first scenario:
 
-1. The extension collects all header tags: `@acme`, `@staging`, `@chrome @firefox`, `@en`, `@smoke`, `@high`, `@checkout`, `@wip`
-2. For `@chrome @firefox` it shows a quickpick — your choice is saved for next time
-3. It extracts the goal tag `@checkoutGuestDisplay` from the line above `Scenario:`
-4. It builds and runs: `npx cucumber-js @acme @staging @chrome @en @smoke @high @checkout @wip @checkoutGuestDisplay`
+1. The extension collects **header tags**: `@acme`, `@staging`, `@chrome @firefox`, `@en`
+2. It collects **scenario-level tags**: `@fr @com @sn` (above the `Scenario:`, skipping `#comments`)
+3. For multi-tag lines (`@chrome @firefox`, `@fr @com @sn`) it shows a quickpick
+4. These choices become the **file-level defaults** — saved for next time
+5. It extracts the **goal tag** `@checkoutGuestDisplay` from the line above `Scenario:`
+6. It builds and runs: `npx cucumber-js @acme @staging @chrome @en @fr @checkoutGuestDisplay`
+
+When you run the second scenario, it **inherits the file defaults** — no prompts.
+
+To override choices for a specific scenario, click `↺ Reset tags` (or right-click > "↺ Reset Tag Choices"). On the next run of that scenario, you'll be prompted again, and the new choice is stored as a **per-scenario override** without affecting other scenarios.
 
 ## Configuration
 

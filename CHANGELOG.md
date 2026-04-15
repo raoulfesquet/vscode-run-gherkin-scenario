@@ -4,6 +4,19 @@ All notable changes to **Run Gherkin Scenario** will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [1.3.0] - 2026-04-15
+
+### Added
+
+- Scenario-level tag parsing: tags above `Scenario:` lines (e.g. under `#context`) are now collected alongside header tags
+- Per-scenario tag choices: first run establishes file-level defaults, subsequent scenarios inherit automatically
+- Contextual reset: "↺ Reset Tag Choices" in right-click menu resets only the targeted scenario
+- Inline `↺ Reset tags` CodeLens button next to the Run button on each scenario
+
+### Fixed
+
+- Multi-tag lines at scenario level (e.g. `@fr @com @sn` under `#context`) were previously ignored
+
 ## [1.2.1] - 2026-04-10
 
 ### Added
