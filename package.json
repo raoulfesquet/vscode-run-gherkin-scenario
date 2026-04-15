@@ -109,6 +109,10 @@
       {
         "command": "gherkin.resetTagChoices",
         "title": "↺ Reset Tag Choices"
+      },
+      {
+        "command": "gherkin.resetTagChoicesAt",
+        "title": "↺ Reset Tag Choices (at line)"
       }
     ],
     "menus": {

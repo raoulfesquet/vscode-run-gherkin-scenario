@@ -293,6 +293,12 @@ class ScenarioCodeLensProvider {
           arguments: [i, true],
         }));
       }
+
+      lenses.push(new vscode.CodeLens(range, {
+        title: '\u21BA Reset tags',
+        command: 'gherkin.resetTagChoicesAt',
+        arguments: [i],
+      }));
     }
 
     return lenses;
@@ -339,6 +345,20 @@ async function configureFlags() {
 
 // ── Reset tag choices ──────────────────────────────────────────
 
+async function resetTagChoicesAt(context, scenarioLine) {
+  const editor = vscode.window.activeTextEditor;
+  if (!editor) return;
+
+  const goalTag = findGoalTagAt(editor.document, scenarioLine);
+  if (!goalTag) return;
+
+  const key = choicesKey(editor.document.uri.fsPath);
+  const allStored = context.workspaceState.get(key, {});
+  allStored[goalTag] = RESET_MARKER;
+  await context.workspaceState.update(key, allStored);
+  vscode.window.showInformationMessage(`Tag choices reset for ${goalTag} — will be asked again on next run.`);
+}
+
 async function resetTagChoices(context) {
   const editor = vscode.window.activeTextEditor;
   if (!editor) {
@@ -369,6 +389,7 @@ function activate(context) {
     vscode.commands.registerCommand('gherkin.runScenarioAt', (line, visual) => runScenario(context, visual, line)),
     vscode.commands.registerCommand('gherkin.configureFlags', () => configureFlags()),
     vscode.commands.registerCommand('gherkin.resetTagChoices', () => resetTagChoices(context)),
+    vscode.commands.registerCommand('gherkin.resetTagChoicesAt', (line) => resetTagChoicesAt(context, line)),
     vscode.languages.registerCodeLensProvider(
       { pattern: '**/*.feature' },
       new ScenarioCodeLensProvider(),
