@@ -23,6 +23,8 @@ Place your cursor anywhere inside a scenario and right-click:
 - **▶ Run Scenario (visual)** — run with `--visual` flag (when enabled)
 - **↺ Reset Tag Choices** — reset stored tag choices for the scenario at cursor position; if the cursor is outside any scenario, resets all choices for the file
 
+![Right-click context menu](images/context-menu.png)
+
 ### CodeLens
 
 Each `Scenario:` line shows inline buttons:
@@ -30,6 +32,8 @@ Each `Scenario:` line shows inline buttons:
 - `▶ Run @goalTag` — run the scenario
 - `▶ Run (visual)` — run with `--visual` flag (when enabled)
 - `↺ Reset tags` — reset stored tag choices for this specific scenario
+
+![CodeLens inline buttons](images/codelens-inline.png)
 
 ### Command Palette
 
