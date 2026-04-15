@@ -18,7 +18,17 @@ function parseHeaderTagLines(document) {
   return tagLines;
 }
 
-// ── Scenario goal-tag extraction ───────────────────────────────
+// ── Scenario detection & tag extraction ─────────────────────────
+
+function findScenarioLine(document, lineNumber) {
+  for (let i = lineNumber; i < Math.min(document.lineCount, lineNumber + 3); i++) {
+    if (SCENARIO_RE.test(document.lineAt(i).text)) return i;
+  }
+  for (let i = lineNumber; i >= 0; i--) {
+    if (SCENARIO_RE.test(document.lineAt(i).text)) return i;
+  }
+  return null;
+}
 
 function findGoalTagAt(document, scenarioLine) {
   if (scenarioLine === 0) return null;
@@ -27,35 +37,57 @@ function findGoalTagAt(document, scenarioLine) {
 }
 
 function findGoalTag(document, lineNumber) {
-  let scenarioLine = null;
-
-  for (let i = lineNumber; i < Math.min(document.lineCount, lineNumber + 3); i++) {
-    if (SCENARIO_RE.test(document.lineAt(i).text)) { scenarioLine = i; break; }
-  }
-  if (scenarioLine === null) {
-    for (let i = lineNumber; i >= 0; i--) {
-      if (SCENARIO_RE.test(document.lineAt(i).text)) { scenarioLine = i; break; }
-    }
-  }
+  const scenarioLine = findScenarioLine(document, lineNumber);
   if (scenarioLine === null) return null;
-
   return findGoalTagAt(document, scenarioLine);
 }
 
+function parseScenarioTagLines(document, scenarioLine) {
+  const tagLines = [];
+  for (let i = scenarioLine - 2; i >= 0; i--) {
+    const text = document.lineAt(i).text.trim();
+    if (text.startsWith('#')) continue;
+    if (text === '' || !text.startsWith('@')) break;
+    const tags = [...text.matchAll(TAG_RE)].map(m => `@${m[1]}`);
+    if (tags.length > 0) tagLines.unshift({ tags });
+  }
+  return tagLines;
+}
+
 // ── Persistent tag choices ─────────────────────────────────────
+
+const FILE_KEY = '__file__';
 
 function choicesKey(filePath) {
   return `tagChoices:${filePath}`;
 }
 
-async function resolveHeaderTags(document, state) {
-  const tagLines = parseHeaderTagLines(document);
-  const key = choicesKey(document.uri.fsPath);
-  const stored = state.get(key, {});
-  const resolved = [];
-  let dirty = false;
+async function resolveTags(document, state, goalTag, scenarioLine) {
+  const headerTagLines = parseHeaderTagLines(document);
+  const scenarioTagLines = parseScenarioTagLines(document, scenarioLine);
+  const allTagLines = [...headerTagLines, ...scenarioTagLines];
 
-  for (const { tags } of tagLines) {
+  const key = choicesKey(document.uri.fsPath);
+  const allStored = state.get(key, {});
+  const scenarioId = goalTag || '__default__';
+
+  const hasFileDefaults = allStored[FILE_KEY] && typeof allStored[FILE_KEY] === 'object';
+  const hasScenarioOverride = allStored[scenarioId] && typeof allStored[scenarioId] === 'object';
+
+  let source;
+  if (hasScenarioOverride) {
+    source = allStored[scenarioId];
+  } else if (hasFileDefaults) {
+    source = allStored[FILE_KEY];
+  } else {
+    source = {};
+  }
+
+  const resolved = [];
+  const newChoices = {};
+  let asked = false;
+
+  for (const { tags } of allTagLines) {
     if (tags.length === 1) {
       resolved.push(tags[0]);
       continue;
@@ -63,21 +95,30 @@ async function resolveHeaderTags(document, state) {
 
     const setKey = tags.map(t => t.slice(1)).sort().join(',');
 
-    if (stored[setKey] && tags.includes(stored[setKey])) {
-      resolved.push(stored[setKey]);
+    if (source[setKey] && tags.includes(source[setKey])) {
+      resolved.push(source[setKey]);
+      newChoices[setKey] = source[setKey];
     } else {
       const picked = await vscode.window.showQuickPick(tags, {
         placeHolder: `Choose one: ${tags.join('  ')}`,
-        title: 'Multiple tags on the same line',
+        title: `Multiple tags on the same line (${goalTag})`,
       });
       if (!picked) return null;
-      stored[setKey] = picked;
-      dirty = true;
+      newChoices[setKey] = picked;
+      asked = true;
       resolved.push(picked);
     }
   }
 
-  if (dirty) await state.update(key, stored);
+  if (asked) {
+    if (!hasFileDefaults) {
+      allStored[FILE_KEY] = newChoices;
+    } else {
+      allStored[scenarioId] = newChoices;
+    }
+    await state.update(key, allStored);
+  }
+
   return resolved;
 }
 
@@ -169,14 +210,19 @@ async function runScenario(context, visual, lineOverride) {
   if (!editor) return;
 
   const line = typeof lineOverride === 'number' ? lineOverride : editor.selection.active.line;
-  const goalTag = findGoalTag(editor.document, line);
+  const scenarioLine = findScenarioLine(editor.document, line);
+  if (scenarioLine === null) {
+    vscode.window.showWarningMessage('No scenario found at cursor position');
+    return;
+  }
+  const goalTag = findGoalTagAt(editor.document, scenarioLine);
   if (!goalTag) {
     vscode.window.showWarningMessage('No scenario goal tag found at cursor position');
     return;
   }
 
-  const headerTags = await resolveHeaderTags(editor.document, context.workspaceState);
-  if (!headerTags) return;
+  const resolvedTags = await resolveTags(editor.document, context.workspaceState, goalTag, scenarioLine);
+  if (!resolvedTags) return;
 
   const resource = editor.document.uri;
   const ready = await firstRunSetup(resource);
@@ -187,7 +233,7 @@ async function runScenario(context, visual, lineOverride) {
   const strip = cfg.get('stripTagPrefix', false);
   const defaultFlags = cfg.get('defaultFlags', []);
 
-  const allTags = [...headerTags, goalTag].map(t => strip ? t.replace(/^@/, '') : t);
+  const allTags = [...resolvedTags, goalTag].map(t => strip ? t.replace(/^@/, '') : t);
   const flags = [...defaultFlags];
   if (visual) flags.push('--visual');
 
@@ -299,7 +345,7 @@ async function resetTagChoices(context) {
   }
   const key = choicesKey(editor.document.uri.fsPath);
   await context.workspaceState.update(key, undefined);
-  vscode.window.showInformationMessage('Tag choices reset \u2014 they will be asked again on next run.');
+  vscode.window.showInformationMessage('Tag choices reset — they will be asked again on next run.');
 }
 
 // ── Lifecycle ──────────────────────────────────────────────────
