@@ -13,6 +13,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 - Contextual reset: "↺ Reset Tag Choices" in right-click menu resets only the targeted scenario
 - Inline `↺ Reset tags` CodeLens button next to the Run button on each scenario
 
+### Changed
+
+- Custom flags input in setup wizard is now shown only when "✏ Custom flags…" is selected in the picker
+
 ### Fixed
 
 - Multi-tag lines at scenario level (e.g. `@fr @com @sn` under `#context`) were previously ignored

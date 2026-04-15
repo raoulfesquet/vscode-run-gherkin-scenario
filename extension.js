@@ -178,23 +178,29 @@ async function firstRunSetup(resource) {
   if (!stripChoice) return false;
   await cfg.update('stripTagPrefix', stripChoice.value, vscode.ConfigurationTarget.WorkspaceFolder);
 
-  const flagItems = COMMON_FLAGS.map(f => ({ label: f.flag, detail: f.label, picked: false }));
+  const CUSTOM_FLAG_ITEM = { label: '✏ Custom flags…', detail: 'Enter your own flags manually', isCustom: true };
+  const flagItems = [
+    ...COMMON_FLAGS.map(f => ({ label: f.flag, detail: f.label, picked: false })),
+    CUSTOM_FLAG_ITEM,
+  ];
   const picked = await vscode.window.showQuickPick(flagItems, {
     canPickMany: true,
     placeHolder: 'Select flags to add to every run (or press Enter to skip)',
     title: 'Gherkin Runner — Step 3/3 — Default flags',
     ignoreFocusOut: true,
   });
-  const flags = picked ? picked.map(p => p.label) : [];
+  const flags = picked ? picked.filter(p => !p.isCustom).map(p => p.label) : [];
 
-  const custom = await vscode.window.showInputBox({
-    prompt: 'Add custom flags? (space-separated, or leave empty to skip)',
-    placeHolder: 'e.g. --timeout 30000 --bail',
-    title: 'Gherkin Runner — Step 3/3 — Custom flags',
-    ignoreFocusOut: true,
-  });
-  if (custom && custom.trim()) {
-    flags.push(...custom.trim().split(/\s+/));
+  if (picked && picked.some(p => p.isCustom)) {
+    const custom = await vscode.window.showInputBox({
+      prompt: 'Enter custom flags (space-separated)',
+      placeHolder: 'e.g. --timeout 30000 --bail',
+      title: 'Gherkin Runner — Step 3/3 — Custom flags',
+      ignoreFocusOut: true,
+    });
+    if (custom && custom.trim()) {
+      flags.push(...custom.trim().split(/\s+/));
+    }
   }
 
   await cfg.update('defaultFlags', flags, vscode.ConfigurationTarget.WorkspaceFolder);
