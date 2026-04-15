@@ -108,7 +108,7 @@
       },
       {
         "command": "gherkin.resetTagChoices",
-        "title": "Gherkin: Reset Tag Choices"
+        "title": "↺ Reset Tag Choices"
       }
     ],
     "menus": {
@@ -122,6 +122,11 @@
           "command": "gherkin.runScenarioVisual",
           "when": "resourceExtname == .feature && config.gherkinRunner.showVisualCodeLens",
           "group": "1_run@2"
+        },
+        {
+          "command": "gherkin.resetTagChoices",
+          "when": "resourceExtname == .feature",
+          "group": "1_run@3"
         }
       ]
     }
